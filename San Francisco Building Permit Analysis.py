@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-Spyder Editor
+Created on Tue Feb 22 00:36:24 2022
 
-This is a temporary script file.
+@author: Dorcas
 """
 
 #Data manipulation libraries
@@ -17,6 +17,9 @@ import seaborn as sns
 # Machine Learning Models
 from sklearn.linear_model import LinearRegression
 from sklearn.ensemble import RandomForestRegressor,GradientBoostingRegressor
+from sklearn.preprocessing import  StandardScaler
+from sklearn.tree import DecisionTreeClassifier
+from sklearn import tree
 
 # Hyperparameter tuning
 from sklearn.model_selection import GridSearchCV,train_test_split,RandomizedSearchCV
@@ -108,11 +111,12 @@ permit['wait_time'] = permit['Issued Date'] - permit['Filed Date']
 
 permit['wait_time'].head()
 
-#Convert the time in days from Datetime format to integer
+#Convert wait time from Datetime format to integer
 permit['wait_time']=permit['wait_time'].dt.days
 
 # 6. Exploratory Data Analysis
 
+#Explore target variable
 permit['wait_time'].describe()
 
 #We need to examine the max 1262
@@ -174,6 +178,7 @@ plt.ylabel('Number of Records'); plt.title('Permit Type Distribution');
 pmt_d =permit[permit['Current Status'].isin(['issued','revoked','incomplete']) ] 
 
 #Current Data
+#Issued permits has the highest count
 fig=plt.figure(figsize=(8,6))
 sns.catplot(x='Permit Type',hue='Current Status',kind='count',data=pmt_d)
 plt.xlabel('Current Status')
@@ -182,4 +187,195 @@ plt.ylabel('Number of permits')
 plt.title('Current status  permit types')
 plt.xticks()
 plt.show()
+
+# A Count plot showing distribution of Permit Type Definition with permit type
+#otc alteration permit type 8 has the highest number of records
+fig=plt.figure(figsize=(8,6))
+sns.catplot(y='Permit Type Definition',hue='Permit Type',kind='count',data=permit)
+plt.xlabel('Number of Permits')
+plt.xticks()
+plt.ylabel('Permit Type Definition')
+plt.title('Number of permits per permit type definition')
+plt.show()
+
+#Construction Type 5 has the highest number of permits
+fig=plt.figure(figsize=(8,6))
+sns.catplot(x='Permit Type',hue='Existing Construction Type',kind='count',data=permit)
+plt.xlabel('Permit Types')
+plt.ylabel('Count of Existing Construction types')
+plt.title('Count of Permit types for existing construction types')
+plt.xticks()
+plt.show()
+
+# 7. Dealing With Outliers
+
+#a.) Estimated Cost
+#Skewed to the right
+sns.kdeplot(data=permit['Estimated Cost'] ,shade=False,alpha=0.8)
+plt.show()
+
+#b.) Plansets
+#Skewed to the right
+sns.kdeplot(data=permit['Plansets'] ,shade=False,alpha=0.8)
+plt.show()
+
+#c.) Revised Costs
+#Skewed to the right
+sns.kdeplot(data=permit['Revised Cost'] ,shade=False,alpha=0.8)
+plt.show()
+
+#d.) Existing Units
+#Skewed to the right
+sns.kdeplot(data=permit['Existing Units'] ,shade=False,alpha=0.8)
+plt.show()
+
+#e.) Proposed Units
+#Skewed to the right
+sns.kdeplot(data=permit['Proposed Units'] ,shade=False,alpha=0.8)
+plt.show()
+
+#Remove Outliers
+#a.) Estimated Cost
+Q1 = permit['Estimated Cost'].describe()['25%']
+Q3 = permit['Estimated Cost'].describe()['75%']
+IQR = Q3 - Q1
+permit = permit[(permit['Estimated Cost'] > (Q1 - 3 * IQR)) &
+            (permit['Estimated Cost'] < (Q3 + 3 * IQR))]
+
+#b.) Plansets
+Q1 = permit['Plansets'].describe()['25%']
+Q3 = permit['Plansets'].describe()['75%']
+IQR = Q3 - Q1
+permit = permit[(permit['Plansets'] > (Q1 - 3 * IQR)) &
+            (permit['Plansets'] < (Q3 + 3 * IQR))]
+
+#c.) Revised Costs
+Q1 = permit['Revised Cost'].describe()['25%']
+Q3 = permit['Revised Cost'].describe()['75%']
+IQR = Q3 - Q1
+permit = permit[(permit['Revised Cost'] > (Q1 - 3 * IQR)) &
+            (permit['Revised Cost'] < (Q3 + 3 * IQR))]
+
+#d.) Existing Units
+Q1 = permit['Existing Units'].describe()['25%']
+Q3 = permit['Existing Units'].describe()['75%']
+IQR = Q3 - Q1
+permit = permit[(permit['Existing Units'] > (Q1 - 3 * IQR)) &
+            (permit['Existing Units'] < (Q3 + 3 * IQR))]
+
+#e.) Proposed Units
+Q1 = permit['Proposed Units'].describe()['25%']
+Q3 = permit['Proposed Units'].describe()['75%']
+IQR = Q3 - Q1
+permit = permit[(permit['Proposed Units'] > (Q1 - 3 * IQR)) &
+            (permit['Proposed Units'] < (Q3 + 3 * IQR))]
+
+#Plot figures after deleting outliers
+#a.) Estimated Cost
+sns.kdeplot(data=permit['Estimated Cost'] ,shade=False,alpha=0.8)
+plt.show()
+
+#b.) Plansets
+sns.kdeplot(data=permit['Plansets'] ,shade=False,alpha=0.8)
+plt.show()
+
+#c.) Revised Costs
+sns.kdeplot(data=permit['Revised Cost'] ,shade=False,alpha=0.8)
+plt.show()
+
+#d.) Existing Units
+sns.kdeplot(data=permit['Existing Units'] ,shade=False,alpha=0.8)
+plt.show()
+
+#e.) Proposed Units
+sns.kdeplot(data=permit['Proposed Units'] ,shade=False,alpha=0.8)
+plt.show()
+
+# 8.) Correlation Matrix
+
+#Correlation Matrix
+corr = permit.corr()
+plt.figure(figsize=(20,10))
+sns.heatmap(corr, annot=True, cmap='coolwarm')
+
+correlation_matrix =permit.corr()['wait_time'].sort_values()
+
+#Top 7 highly negative correlated
+correlation_matrix.head(7)
+
+#Top 7 highly positive correlated 
+correlation_matrix.tail(7)
+
+#Pre-Processing
+category_col = ['Permit Type','Street Number','Existing Construction Type','Zipcode','Supervisor District']
+
+permit[category_col]=permit[category_col].astype('str')
+
+#Verify data types
+permit.dtypes
+
+#Drop Unnecessary Columns
+permit.drop(columns =list(['Filed Date','Issued Date','Record ID','Location',
+                           'Number of Existing Stories','Estimated Cost',
+                           'Existing Units','Current Status',]),axis=1,inplace=True) 
+
+permit.shape
+
+
+
+# 9. Data Preprocessing
+
+#Data Preprocessing
+    #Separate the data and Label
+x = permit.drop('wait_time', axis=1)
+y = permit.loc[:, 'wait_time']
+
+# Select categorical columns with relatively low cardinality
+cat_cols = [cname for cname in x.columns 
+                    if x[cname].nunique() < 10 and x[cname].dtype == "string"]
+
+#Get dummies
+cat_cols1= pd.get_dummies(x[cat_cols])
+
+cat_cols1.apply(pd.to_numeric)
+
+#Numerical columns
+num_cols = [cname for cname in x.columns 
+                  if x[cname].dtype in ['int64', 'float64']]
+
+scaler = StandardScaler()
+x[num_cols] = scaler.fit_transform(x[num_cols] )
+
+#Numerical columns have minimum skewness
+x[num_cols].skew(axis=0)
+
+num_data = pd.DataFrame(x[num_cols])
+
+#Combine categorical and numerical
+X =pd.concat([cat_cols1, num_data],axis=1) 
+
+# Convert y to one-dimensional array (vector)
+y = np.array(y).reshape((-1, ))
+
+#Split the data into train and test data
+X_train, X_test, y_train, y_test,  = train_test_split(x, y, test_size=0.2, random_state=3)
+print(y.shape, y_train.shape, y_test.shape)
+
+#To compare the shape of different testing and training sets
+   #printing shapes of testing and training sets :
+print("shape of original dataset :", permit.shape)
+print("shape of input - training set", X_train.shape)
+print("shape of output - training set", y_train.shape)
+print("shape of input - testing set", X_test.shape)
+print("shape of output - testing set", y_test.shape)
+
+# 10. Model Training
+
+# a). Decision Tree
+
+# define our basic tree classifier
+model_tree = tree.DecisionTreeClassifier()
+
+# fit it to the training data
+model_tree.fit(X_train, y_train)
 
